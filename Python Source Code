@@ -1,0 +1,42 @@
+Below is the python code used for EDA and Data Transformation for the given data set
+
+import kagglehub
+import pandas as pd
+import numpy as np
+from sqlalchemy import create_engine
+from mysql.connector import connection
+
+pd.set_option('display.max_columns',1500)
+
+path = kagglehub.dataset_download("ankitbansal06/retail-orders")
+
+print("Path to dataset files:", path)
+df=pd.read_csv('C:\\Users\\HP\\.cache\\kagglehub\\datasets\\ankitbansal06\\retail-orders\\versions\\4\\orders.csv')
+df['Ship Mode']=df['Ship Mode'].replace(
+    {"Not Available":np.nan,
+     "unknown":np.nan}
+)
+
+
+#changing the columns to lower case and replacing the space with underscore
+
+df.columns=df.columns.str.replace(" ","_")
+df.columns=df.columns.str.lower()
+
+
+#derive new columns discounts,sales price and profit
+
+df["discount_price"]=(df["discount_percent"]/100)*df["list_price"]
+df["sales_price"]=df["list_price"]-df["discount_price"]
+df["profit"]=df["sales_price"]-df["cost_price"]
+
+#drop columns
+df=df.drop(["discount_percent","cost_price","list_price"],axis=1)
+
+#convert order_date datatype to date
+df["order_date"]=pd.to_datetime(df["order_date"],format="%Y-%m-%d")
+
+engine=create_engine("mysql+pymysql://root:password@localhost\
+/expense_manager")
+df.to_sql("df_orders",con=engine,if_exists="append",index=False)
+
