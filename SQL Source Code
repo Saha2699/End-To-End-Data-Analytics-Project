@@ -1,0 +1,52 @@
+Below is the SQL code and the questions it has answered
+
+
+1.TOP 10 Products By Revenue
+
+select  product_id,ROUND(sum(quantity*sales_price),2) as revenue from df_orders
+group by product_id
+order by revenue desc
+LIMIT 10
+
+2.TOP 5 Product From Each Region
+
+with cte as(select region, product_id,ROUND(sum(quantity*sales_price),2) as revenue from df_orders
+group by product_id,region
+order by region)
+
+select region,product_id,revenue from (select *,row_number() over(partition by region order by  revenue desc) as rnk from cte) a
+where a.rnk<=5
+
+3.Mom Percentage as compared to last year fo same month:
+
+with cte as(
+select a.mn_no,ROUND(sum(case when year(order_date)=2022 then quantity*sales_price else 0 end),2) as 2022_revenue 
+,ROUND(sum(case when year(order_date)=2023 then quantity*sales_price else 0 end),2) as 2023_revenue from
+(select *,month(order_date) as mn_no from df_orders) a
+group by a.mn_no
+order by mn_no asc)
+select *,ROUND(((2023_revenue-2022_revenue)/2022_revenue)*100,2) as MoM_Pct from cte
+
+4.For each category which month has the highest sales:
+
+with cte as(
+select category,mn_no,round(sum(quantity*profit),2) as revenue from(select *,month(order_date) as mn_no from df_orders)a
+group by category,mn_no
+order by category asc),
+cte2 as(
+select *,dense_rank() over(partition by category order by revenue desc) as rn from cte
+)
+select category,mn_no,revenue from cte2
+where rn=1
+
+5.which sub-category had highest growth by profit in 2023 compared to 2022:
+
+with cte as(
+select sub_category,round(sum(case when year(order_date)=2022 then quantity*profit else 0 end),2) as 2022_profit,
+round(sum(case when year(order_date)=2023 then quantity*profit else 0 end),2) as 2023_profit from df_orders
+group by sub_category)
+
+select *,ROUND(((2023_profit-2022_profit)/2022_profit)*100,2) as profit_growth from cte
+order by profit_growth desc
+
+
